@@ -1,0 +1,30 @@
+---
+- name: setup git , httpd , start httpd , deploy index.html
+  become: yes
+  hosts: all
+  tasks:
+    - name: Git Installation 
+      yum: 
+        name: git
+        state: present
+    - name: Httpd Installation 
+      yum: 
+        name: httpd
+        state: present
+    - name: Httpd Service Start 
+      service: 
+        name: httpd
+        state: started
+      tags: httpd_service
+    - name: Status Httpd Service  
+      shell: systemctl status httpd
+      register: status_output
+      tags: httpd_service
+    - name: Display Httpd Service 
+      debug:
+        var: status_output
+      tags: httpd_service     
+    - name: Deploying Index.html 
+      copy:
+        src: /opt/index.html 
+        dest: /var/www/html/index.html 
