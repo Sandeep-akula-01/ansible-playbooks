@@ -1,0 +1,69 @@
+---
+- name: Install and Configure Apache Tomcat 9
+  hosts: all
+  become: yes
+
+  vars:
+    tomcat_version: "9.0.111"
+    tomcat_dir: "/opt/apache-tomcat-9.0.111"
+    tomcat_tar: "apache-tomcat-9.0.111.tar.gz"
+    tomcat_url: "https://dlcdn.apache.org/tomcat/tomcat-9/v9.0.111/bin/apache-tomcat-9.0.111.tar.gz"
+
+  tasks:
+
+    - name: Install Java
+      yum:
+        name: java
+        state: present
+
+    - name: Download Tomcat archive
+      get_url:
+        url: "{{ tomcat_url }}"
+        dest: "/opt/{{ tomcat_tar }}"
+        mode: '0644'
+
+    - name: Extract Tomcat
+      unarchive:
+        src: "/opt/{{ tomcat_tar }}"
+        dest: /opt
+        remote_src: yes
+        creates: "{{ tomcat_dir }}"
+
+    - name: Allow manager access from all IPs
+      replace:
+        path: "{{ tomcat_dir }}/webapps/manager/META-INF/context.xml"
+        regexp: '"127\\.\\d+\\.\\d+\\.\\d+\\|::1\\|0:0:0:0:0:0:0:1"'
+        replace: '".*"'
+
+    - name: Backup existing tomcat-users.xml
+      copy:
+        src: "{{ tomcat_dir }}/conf/tomcat-users.xml"
+        dest: "{{ tomcat_dir }}/conf/tomcat-users_bkup_11sep25.xml"
+        remote_src: yes
+        force: no
+
+    - name: Configure tomcat-users.xml
+      copy:
+        dest: "{{ tomcat_dir }}/conf/tomcat-users.xml"
+        content: |
+          <?xml version="1.0" encoding="utf-8"?>
+          <tomcat-users>
+            <role rolename="manager-gui"/>
+            <user username="tomcat" password="tomcat"
+                  roles="manager-gui,manager-script,manager-status"/>
+          </tomcat-users>
+        mode: '0644'
+
+    # Optional: Change Tomcat Port
+    # - name: Change Tomcat port to 8081
+    #   replace:
+    #     path: "{{ tomcat_dir }}/conf/server.xml"
+    #     regexp: 'Connector port="8080"'
+    #     replace: 'Connector port="8081"'
+
+    - name: Start Tomcat
+      shell: "{{ tomcat_dir }}/bin/startup.sh"
+      args:
+        chdir: "{{ tomcat_dir }}/bin"
+      register: tomcat_start
+      changed_when: "'Tomcat started' in tomcat_start.stdout"
