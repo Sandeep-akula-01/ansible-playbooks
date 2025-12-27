@@ -1,0 +1,22 @@
+---
+- name: setup git , httpd , start httpd , deploy index.html
+  become: yes
+  hosts: all
+  tasks:
+    - name: Git Installation
+      yum:
+        name: git
+        state: present
+    - name: Httpd Installation
+      yum:
+        name: httpd
+        state: present
+    - name: Httpd Service Start
+      service:
+        name: httpd
+        state: started
+    - name: Deploying Index.html
+      template:
+        src: /opt/index.j2
+        dest: /var/www/html/index.html
+      tags: deploy
